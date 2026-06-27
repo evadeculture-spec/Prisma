@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,11 @@ export function CreateTaskDialog({ assignees, currentUserId, contactId, property
   const [type, setType] = useState<TaskType>("follow_up");
   const [assignedTo, setAssignedTo] = useState(currentUserId);
 
-  useEffect(() => {
+  const [lastInfo, setLastInfo] = useState(state.info);
+  if (state.info !== lastInfo) {
+    setLastInfo(state.info);
     if (state.info) setOpen(false);
-  }, [state.info]);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

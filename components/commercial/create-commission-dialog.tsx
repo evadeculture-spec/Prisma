@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,9 +42,11 @@ export function CreateCommissionDialog({
   const [agentId, setAgentId] = useState(defaultAgentId ?? agents[0]?.id ?? "");
   const [status, setStatus] = useState<CommissionStatus>("expected");
 
-  useEffect(() => {
+  const [lastInfo, setLastInfo] = useState(state.info);
+  if (state.info !== lastInfo) {
+    setLastInfo(state.info);
     if (state.info) setOpen(false);
-  }, [state.info]);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
