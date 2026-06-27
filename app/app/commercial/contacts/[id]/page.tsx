@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClipboardList, Mail, MapPin, Phone, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ClipboardList, HandCoins, Mail, MapPin, Phone, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { ContactStatusSelect } from "@/components/commercial/contact-status-select";
+import { CreateCommissionDialog } from "@/components/commercial/create-commission-dialog";
 import { CreateTaskDialog } from "@/components/commercial/create-task-dialog";
 import { TaskList } from "@/components/commercial/task-list";
 import { Topbar } from "@/components/layout/topbar";
@@ -103,8 +104,21 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
 
         {property && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
               <CardTitle className="text-base">Imóvel associado</CardTitle>
+              {contact.status === "closed" && (
+                <CreateCommissionDialog
+                  properties={[{ id: property.id, title: property.title }]}
+                  agents={profiles}
+                  defaultPropertyId={property.id}
+                  defaultAgentId={contact.owner_id ?? undefined}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <HandCoins className="size-4" /> Criar comissão
+                    </Button>
+                  }
+                />
+              )}
             </CardHeader>
             <CardContent className="pb-5">
               <Link

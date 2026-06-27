@@ -24,13 +24,22 @@ interface PropertyOption {
 interface CreateCommissionDialogProps {
   properties: PropertyOption[];
   agents: Profile[];
+  defaultPropertyId?: string;
+  defaultAgentId?: string;
+  trigger?: React.ReactNode;
 }
 
-export function CreateCommissionDialog({ properties, agents }: CreateCommissionDialogProps) {
+export function CreateCommissionDialog({
+  properties,
+  agents,
+  defaultPropertyId,
+  defaultAgentId,
+  trigger,
+}: CreateCommissionDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isSubmitting] = useActionState(createCommissionAction, INITIAL_STATE);
-  const [propertyId, setPropertyId] = useState(properties[0]?.id ?? "");
-  const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
+  const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
+  const [agentId, setAgentId] = useState(defaultAgentId ?? agents[0]?.id ?? "");
   const [status, setStatus] = useState<CommissionStatus>("expected");
 
   useEffect(() => {
@@ -40,9 +49,11 @@ export function CreateCommissionDialog({ properties, agents }: CreateCommissionD
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={properties.length === 0}>
-          <Plus className="size-4" /> Nova comissão
-        </Button>
+        {trigger ?? (
+          <Button disabled={properties.length === 0}>
+            <Plus className="size-4" /> Nova comissão
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bath, BedDouble, MapPin, Maximize, Sparkles } from "lucide-react";
+import { Bath, BedDouble, MapPin, Maximize, Sparkles, Users } from "lucide-react";
 
 import { Topbar } from "@/components/layout/topbar";
 import { GenerateCampaignButton } from "@/components/studio/generate-campaign-button";
@@ -10,9 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth";
 import { getCampaignsForProperty } from "@/lib/data/campaigns";
+import { getContactsForProperty } from "@/lib/data/commercial";
 import { getPropertyById, getPropertyImages } from "@/lib/data/properties";
 import { formatArea, formatCurrency, formatDate } from "@/lib/format";
-import { CONDITION_LABEL, DEAL_TYPE_LABEL, TARGET_AUDIENCE_LABEL, TONE_LABEL, TYPOLOGY_LABEL } from "@/lib/labels";
+import {
+  CONDITION_LABEL,
+  CONTACT_STATUS_LABEL,
+  DEAL_TYPE_LABEL,
+  TARGET_AUDIENCE_LABEL,
+  TONE_LABEL,
+  TYPOLOGY_LABEL,
+} from "@/lib/labels";
 
 interface PropertyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -25,9 +33,10 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
   const property = await getPropertyById(id, user.agency.id);
   if (!property) notFound();
 
-  const [images, campaigns] = await Promise.all([
+  const [images, campaigns, contacts] = await Promise.all([
     getPropertyImages(id, user.agency.id),
     getCampaignsForProperty(id, user.agency.id),
+    getContactsForProperty(id, user.agency.id),
   ]);
 
   const area = formatArea(property.useful_area ?? property.gross_area);
@@ -97,6 +106,35 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
           </CardHeader>
           <CardContent>
             <PropertyImageManager propertyId={property.id} images={images} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="size-4 text-primary" /> Interessados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-5">
+            {contacts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ainda não há contactos associados a este imóvel.</p>
+            ) : (
+              <ul className="space-y-2">
+                {contacts.map((contact) => (
+                  <li key={contact.id}>
+                    <Link
+                      href={`/app/commercial/contacts/${contact.id}`}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary/60"
+                    >
+                      <span className="font-medium text-foreground">{contact.name}</span>
+                      <Badge variant="secondary" className="text-[11px]">
+                        {CONTACT_STATUS_LABEL[contact.status]}
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { formatCurrency } from "@/lib/format";
 import type { AuthActionState } from "@/lib/actions/auth";
 import type {
   CommissionStatus,
@@ -12,6 +13,7 @@ import type {
   ContactSource,
   ContactStatus,
   ContactType,
+  FeedPostType,
   PropertyType,
   ShiftType,
   TaskPriority,
@@ -195,12 +197,67 @@ export async function createCommissionAction(_prevState: AuthActionState, formDa
   return { info: "Comissão criada." };
 }
 
+async function createSaleAchievementPost(
+  supabase: SupabaseServerClient,
+  agencyId: string,
+  authorId: string,
+  details: { propertyId: string | null; agentId: string | null; dealValue: number }
+): Promise<void> {
+  const [{ data: property }, { data: agent }] = await Promise.all([
+    details.propertyId
+      ? supabase.from("properties").select("title").eq("id", details.propertyId).eq("agency_id", agencyId).maybeSingle()
+      : Promise.resolve({ data: null as { title: string } | null }),
+    details.agentId
+      ? supabase.from("profiles").select("full_name").eq("id", details.agentId).eq("agency_id", agencyId).maybeSingle()
+      : Promise.resolve({ data: null as { full_name: string } | null }),
+  ]);
+
+  const propertyTitle = property?.title ?? null;
+  const agentName = agent?.full_name ?? null;
+
+  const title = propertyTitle ? `Negócio fechado: ${propertyTitle}` : "Negócio fechado";
+  const who = agentName ? `${agentName} fechou` : "A equipa fechou";
+  const what = propertyTitle ? `o negócio "${propertyTitle}"` : "um novo negócio";
+  const content = `${who} ${what}, no valor de ${formatCurrency(details.dealValue)}. Parabéns!`;
+
+  await supabase.from("feed_posts").insert({
+    agency_id: agencyId,
+    author_id: authorId,
+    type: "sale_achievement" satisfies FeedPostType,
+    title,
+    content,
+    related_property_id: details.propertyId,
+  });
+
+  revalidatePath("/app");
+  revalidatePath("/app/feed");
+}
+
 export async function updateCommissionStatusAction(commissionId: string, status: CommissionStatus): Promise<void> {
   const user = await requireUser();
   const supabase = await createClient();
 
-  await supabase.from("commissions").update({ status }).eq("id", commissionId).eq("agency_id", user.agency.id);
+  const { data: existing } = await supabase
+    .from("commissions")
+    .select("status, property_id, agent_id, property_value")
+    .eq("id", commissionId)
+    .eq("agency_id", user.agency.id)
+    .maybeSingle();
+
+  if (!existing) return;
+
+  const { error } = await supabase.from("commissions").update({ status }).eq("id", commissionId).eq("agency_id", user.agency.id);
+  if (error) return;
+
   revalidatePath("/app/commercial/commissions");
+
+  if (status === "paid" && existing.status !== "paid") {
+    await createSaleAchievementPost(supabase, user.agency.id, user.profile.id, {
+      propertyId: existing.property_id,
+      agentId: existing.agent_id,
+      dealValue: Number(existing.property_value),
+    });
+  }
 }
 
 export async function setScheduleAction(userId: string, date: string, shiftType: ShiftType | null): Promise<void> {

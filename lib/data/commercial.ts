@@ -18,6 +18,17 @@ export async function getContacts(agencyId: string, options: { status?: ContactS
   return (data ?? []) as Contact[];
 }
 
+export async function getContactsForProperty(propertyId: string, agencyId: string): Promise<Contact[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("contacts")
+    .select("*")
+    .eq("related_property_id", propertyId)
+    .eq("agency_id", agencyId)
+    .order("created_at", { ascending: false });
+  return (data ?? []) as Contact[];
+}
+
 export interface ContactDetail {
   contact: Contact;
   property: Property | null;
