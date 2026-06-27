@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +13,7 @@ export interface CurrentUser {
   agency: Agency;
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
@@ -39,7 +40,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     profile: profile as Profile,
     agency: agency as Agency,
   };
-}
+});
 
 export async function requireUser(): Promise<CurrentUser> {
   const supabase = await createClient();
