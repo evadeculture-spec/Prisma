@@ -1,8 +1,10 @@
 import type {
   AssetType,
+  CommissionStatus,
   CommunicationTone,
   ContactInterest,
   ContactSource,
+  ContactStatus,
   ContactType,
   DealType,
   FeedPostType,
@@ -12,6 +14,7 @@ import type {
   PropertyType,
   ShiftType,
   TaskPriority,
+  TaskStatus,
   TaskType,
   VideoFormat,
   VideoType,
@@ -168,6 +171,30 @@ export const TARGET_AUDIENCE_LABEL: Record<string, string> = {
   reforma: "Reforma",
   luxo: "Público de luxo",
   estrangeiro: "Compradores estrangeiros",
+};
+
+export const CONTACT_STATUS_LABEL: Record<ContactStatus, string> = {
+  new: "Novo",
+  contacted: "Contactado",
+  qualified: "Qualificado",
+  visit_scheduled: "Visita agendada",
+  proposal_sent: "Proposta enviada",
+  negotiation: "Em negociação",
+  closed: "Fechado",
+  lost: "Perdido",
+};
+
+export const COMMISSION_STATUS_LABEL: Record<CommissionStatus, string> = {
+  expected: "Prevista",
+  negotiating: "Em negociação",
+  closed: "Fechada",
+  paid: "Paga",
+};
+
+export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
+  pending: "Pendente",
+  in_progress: "Em curso",
+  completed: "Concluída",
 };
 
 export const ASSET_TYPE_LABEL: Record<AssetType, string> = {
