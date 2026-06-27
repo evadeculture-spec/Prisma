@@ -1,4 +1,5 @@
 import type {
+  AssetType,
   CommunicationTone,
   ContactInterest,
   ContactSource,
@@ -7,6 +8,7 @@ import type {
   FeedPostType,
   ImageLabel,
   PropertyCondition,
+  PropertyStatus,
   PropertyType,
   ShiftType,
   TaskPriority,
@@ -147,4 +149,40 @@ export const VIDEO_FORMAT_LABEL: Record<VideoFormat, string> = {
   vertical_9_16: "Vertical (9:16)",
   square_1_1: "Quadrado (1:1)",
   horizontal_16_9: "Horizontal (16:9)",
+};
+
+export const PROPERTY_STATUS_LABEL: Record<PropertyStatus, string> = {
+  draft: "Rascunho",
+  active: "Ativo",
+  reserved: "Reservado",
+  sold: "Vendido",
+  rented: "Arrendado",
+  archived: "Arquivado",
+};
+
+export const TARGET_AUDIENCE_LABEL: Record<string, string> = {
+  familia: "Famílias",
+  jovem_casal: "Jovens casais",
+  investidor: "Investidores",
+  estudante: "Estudantes",
+  reforma: "Reforma",
+  luxo: "Público de luxo",
+  estrangeiro: "Compradores estrangeiros",
+};
+
+export const ASSET_TYPE_LABEL: Record<AssetType, string> = {
+  commercial_title: "Título comercial",
+  instagram_caption: "Legenda Instagram",
+  portal_description: "Descrição para portais",
+  facebook_copy: "Copy Facebook",
+  whatsapp_message: "Mensagem WhatsApp",
+  reel_script: "Guião de Reel",
+  video_script: "Guião de vídeo",
+  hashtags: "Hashtags",
+  cta: "Chamadas para ação",
+  story_sequence: "Sequência de Stories",
+  instagram_carousel: "Carrossel Instagram",
+  meta_ad: "Anúncio Meta Ads",
+  newsletter: "Newsletter",
+  content_calendar: "Calendário de publicações",
 };
