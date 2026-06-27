@@ -16,9 +16,17 @@ import type {
   TaskPriority,
   TaskStatus,
   TaskType,
+  UserRole,
   VideoFormat,
   VideoType,
 } from "@/lib/types/domain";
+
+export const ROLE_LABEL: Record<UserRole, string> = {
+  admin: "Administrador",
+  coordinator: "Coordenador",
+  agent: "Agente",
+  marketing: "Marketing",
+};
 
 export const TYPOLOGY_LABEL: Record<PropertyType, string> = {
   t0: "Apartamento T0",
