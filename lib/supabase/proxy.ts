@@ -12,9 +12,11 @@ function isPublicPath(pathname: string) {
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
 
   if (!isSupabaseConfigured) {
-    return response;
+    if (pathname === "/setup-required") return response;
+    return NextResponse.redirect(new URL("/setup-required", request.url));
   }
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -33,7 +35,6 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getUser();
-  const { pathname } = request.nextUrl;
 
   if (!data.user && !isPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
