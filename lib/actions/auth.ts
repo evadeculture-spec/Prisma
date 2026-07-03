@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_CREDENTIALS } from "@/lib/demo";
 
@@ -42,11 +43,29 @@ export async function signInAction(_prevState: AuthActionState, formData: FormDa
 }
 
 export async function demoSignInAction(_prevState: AuthActionState): Promise<AuthActionState> {
+  const admin = createAdminClient();
+
+  // Generate a one-time magic-link token for the demo user without sending an email.
+  // This bypasses password-hash compatibility issues with direct SQL user inserts.
+  const { data, error: genError } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: DEMO_CREDENTIALS.email,
+  });
+
+  if (genError || !data?.properties?.hashed_token) {
+    return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(DEMO_CREDENTIALS);
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash: data.properties.hashed_token,
+    type: "magiclink",
+  });
+
   if (error) {
     return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
   }
+
   redirect("/app");
 }
 
