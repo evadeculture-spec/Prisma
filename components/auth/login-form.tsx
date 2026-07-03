@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Eye, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +24,22 @@ export function LoginForm({ next }: { next: string }) {
         <p className="text-sm text-muted-foreground">Entre na sua conta para continuar.</p>
       </div>
 
-      <form action={demoFormAction} className="space-y-2">
-        <Button type="submit" variant="gold" className="w-full" disabled={isDemoLoading}>
-          {isDemoLoading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-          Entrar em modo de demonstração
+      <div className="space-y-2">
+        <Button variant="gold" className="w-full" asChild>
+          <Link href="/preview">
+            <Eye className="size-4" />
+            Ver demonstração (sem conta)
+          </Link>
         </Button>
-        {demoState.error && <p className="text-center text-sm text-destructive">{demoState.error}</p>}
-      </form>
+
+        <form action={demoFormAction}>
+          <Button type="submit" variant="outline" className="w-full" disabled={isDemoLoading}>
+            {isDemoLoading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            Entrar em modo de demonstração
+          </Button>
+          {demoState.error && <p className="text-center text-sm text-destructive">{demoState.error}</p>}
+        </form>
+      </div>
 
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
