@@ -55,7 +55,22 @@ export async function demoSignInAction(_prevState: AuthActionState): Promise<Aut
     redirect("/app");
   }
 
-  // Slow path: user doesn't exist or needs repair — provision via admin API.
+  // Slow path attempt 1: provision via database RPC (anon key only — no service role needed).
+  // This works only after migration 0006_demo_provision.sql has been applied to the project.
+  try {
+    await supabase.rpc("provision_demo_user");
+    const { error: rpcSignInError } = await supabase.auth.signInWithPassword({
+      email: DEMO_CREDENTIALS.email,
+      password: DEMO_CREDENTIALS.password,
+    });
+    if (!rpcSignInError) {
+      redirect("/app");
+    }
+  } catch {
+    // RPC not available yet — fall through to admin API path.
+  }
+
+  // Slow path attempt 2: provision via admin API (requires SUPABASE_SERVICE_ROLE_KEY).
   const admin = createAdminClient();
 
   const { data: list, error: listError } = await admin.auth.admin.listUsers({ perPage: 100 });
