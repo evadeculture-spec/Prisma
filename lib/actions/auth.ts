@@ -43,6 +43,19 @@ export async function signInAction(_prevState: AuthActionState, formData: FormDa
 }
 
 export async function demoSignInAction(_prevState: AuthActionState): Promise<AuthActionState> {
+  const supabase = await createClient();
+
+  // Fast path: if the demo user already exists with the correct credentials, sign in directly
+  // without touching the admin API (avoids needing SUPABASE_SERVICE_ROLE_KEY when user is seeded).
+  const { error: quickError } = await supabase.auth.signInWithPassword({
+    email: DEMO_CREDENTIALS.email,
+    password: DEMO_CREDENTIALS.password,
+  });
+  if (!quickError) {
+    redirect("/app");
+  }
+
+  // Slow path: user doesn't exist or needs repair — provision via admin API.
   const admin = createAdminClient();
 
   const { data: list, error: listError } = await admin.auth.admin.listUsers({ perPage: 100 });
@@ -56,7 +69,7 @@ export async function demoSignInAction(_prevState: AuthActionState): Promise<Aut
   const hasEmailIdentity = existing?.identities?.some((i) => i.provider === "email") ?? false;
 
   if (existing && hasEmailIdentity) {
-    // Happy path: proper GoTrue user — just refresh the password hash.
+    // User exists — reset password in case it drifted.
     await admin.auth.admin.updateUserById(existing.id, {
       password: DEMO_CREDENTIALS.password,
       email_confirm: true,
@@ -108,12 +121,11 @@ export async function demoSignInAction(_prevState: AuthActionState): Promise<Aut
     );
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { error: finalError } = await supabase.auth.signInWithPassword({
     email: DEMO_CREDENTIALS.email,
     password: DEMO_CREDENTIALS.password,
   });
-  if (error) {
+  if (finalError) {
     return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
   }
 

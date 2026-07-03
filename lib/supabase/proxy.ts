@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./env";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/pricing", "/auth"];
+const PUBLIC_PATHS = ["/login", "/signup", "/pricing", "/auth", "/api/demo-health"];
 
 function isPublicPath(pathname: string) {
   if (pathname === "/") return true;
