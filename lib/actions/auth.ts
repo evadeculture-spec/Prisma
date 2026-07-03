@@ -45,21 +45,34 @@ export async function signInAction(_prevState: AuthActionState, formData: FormDa
 export async function demoSignInAction(_prevState: AuthActionState): Promise<AuthActionState> {
   const admin = createAdminClient();
 
-  // Generate a one-time magic-link token for the demo user without sending an email.
-  // This bypasses password-hash compatibility issues with direct SQL user inserts.
-  const { data, error: genError } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email: DEMO_CREDENTIALS.email,
-  });
+  // Find the demo user or create them if they don't exist yet.
+  const { data: list } = await admin.auth.admin.listUsers({ perPage: 100 });
+  const existing = list?.users?.find((u) => u.email === DEMO_CREDENTIALS.email);
 
-  if (genError || !data?.properties?.hashed_token) {
-    return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
+  if (existing) {
+    // Re-set the password via the admin API so GoTrue stores a hash it can verify
+    // (bypasses bcrypt format issues from SQL-inserted rows).
+    await admin.auth.admin.updateUserById(existing.id, {
+      password: DEMO_CREDENTIALS.password,
+      email_confirm: true,
+    });
+  } else {
+    const { error: createError } = await admin.auth.admin.createUser({
+      email: DEMO_CREDENTIALS.email,
+      password: DEMO_CREDENTIALS.password,
+      email_confirm: true,
+      user_metadata: { full_name: "Beatriz Albi" },
+    });
+    if (createError) {
+      return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
+    }
   }
 
+  // Sign in with the password that was just set/updated by GoTrue.
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
-    token_hash: data.properties.hashed_token,
-    type: "magiclink",
+  const { error } = await supabase.auth.signInWithPassword({
+    email: DEMO_CREDENTIALS.email,
+    password: DEMO_CREDENTIALS.password,
   });
 
   if (error) {
