@@ -11,6 +11,7 @@ export interface CurrentUser {
   email: string;
   profile: Profile;
   agency: Agency;
+  isDemo: boolean;
 }
 
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
@@ -39,6 +40,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     email: auth.user.email ?? profile.email,
     profile: profile as Profile,
     agency: agency as Agency,
+    isDemo: auth.user.is_anonymous === true,
   };
 });
 

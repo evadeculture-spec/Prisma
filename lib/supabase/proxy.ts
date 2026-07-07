@@ -42,7 +42,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (data.user && (pathname === "/login" || pathname === "/signup")) {
+  // Redirect authenticated users away from login/signup — but let anonymous
+  // demo users through so they can create a permanent account.
+  if (data.user && !data.user.is_anonymous && (pathname === "/login" || pathname === "/signup")) {
     return NextResponse.redirect(new URL("/app", request.url));
   }
 

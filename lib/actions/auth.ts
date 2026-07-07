@@ -2,9 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_AGENCY_ID, DEMO_AGENCY_NAME, DEMO_CREDENTIALS } from "@/lib/demo";
 
 export interface AuthActionState {
   error?: string;
@@ -45,104 +43,15 @@ export async function signInAction(_prevState: AuthActionState, formData: FormDa
 export async function demoSignInAction(_prevState: AuthActionState): Promise<AuthActionState> {
   const supabase = await createClient();
 
-  // Fast path: if the demo user already exists with the correct credentials, sign in directly
-  // without touching the admin API (avoids needing SUPABASE_SERVICE_ROLE_KEY when user is seeded).
-  const { error: quickError } = await supabase.auth.signInWithPassword({
-    email: DEMO_CREDENTIALS.email,
-    password: DEMO_CREDENTIALS.password,
-  });
-  if (!quickError) {
-    redirect("/app");
-  }
-
-  // Slow path attempt 1: provision via database RPC (anon key only — no service role needed).
-  // This works only after migration 0006_demo_provision.sql has been applied to the project.
-  try {
-    await supabase.rpc("provision_demo_user");
-    const { error: rpcSignInError } = await supabase.auth.signInWithPassword({
-      email: DEMO_CREDENTIALS.email,
-      password: DEMO_CREDENTIALS.password,
-    });
-    if (!rpcSignInError) {
-      redirect("/app");
-    }
-  } catch {
-    // RPC not available yet — fall through to admin API path.
-  }
-
-  // Slow path attempt 2: provision via admin API (requires SUPABASE_SERVICE_ROLE_KEY).
-  const admin = createAdminClient();
-
-  const { data: list, error: listError } = await admin.auth.admin.listUsers({ perPage: 100 });
-  if (listError) {
+  // Create an isolated anonymous session — no credentials, no email confirmation needed.
+  const { error: signInError } = await supabase.auth.signInAnonymously();
+  if (signInError) {
     return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
   }
 
-  const existing = list?.users?.find((u) => u.email === DEMO_CREDENTIALS.email);
-  // GoTrue requires an "email" identity row for password sign-in.
-  // Direct SQL inserts into auth.users skip that row; detect and fix it here.
-  const hasEmailIdentity = existing?.identities?.some((i) => i.provider === "email") ?? false;
-
-  if (existing && hasEmailIdentity) {
-    // User exists — reset password in case it drifted.
-    await admin.auth.admin.updateUserById(existing.id, {
-      password: DEMO_CREDENTIALS.password,
-      email_confirm: true,
-    });
-  } else if (existing && !hasEmailIdentity) {
-    // User was SQL-inserted without an auth.identities row.
-    // Delete and recreate with the same UUID so GoTrue creates the identity
-    // and all existing profile-scoped data (agency, properties, contacts, …)
-    // keeps its UUID references.
-    await admin.auth.admin.deleteUser(existing.id);
-
-    const { error: createError } = await admin.auth.admin.createUser(
-      // "id" is accepted by GoTrue's REST API but not yet typed in the JS SDK.
-      { id: existing.id, email: DEMO_CREDENTIALS.email, password: DEMO_CREDENTIALS.password,
-        email_confirm: true, user_metadata: { full_name: "Beatriz Albi" } } as Parameters<
-        typeof admin.auth.admin.createUser
-      >[0]
-    );
-    if (createError) {
-      return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
-    }
-
-    // Recreate the profile that was cascade-deleted with the auth user.
-    await admin.from("profiles").upsert(
-      { id: existing.id, agency_id: DEMO_AGENCY_ID, full_name: "Beatriz Albi",
-        email: DEMO_CREDENTIALS.email, role: "admin" },
-      { onConflict: "id" }
-    );
-  } else {
-    // No user at all — create from scratch and seed minimal agency + profile.
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email: DEMO_CREDENTIALS.email,
-      password: DEMO_CREDENTIALS.password,
-      email_confirm: true,
-      user_metadata: { full_name: "Beatriz Albi" },
-    });
-    if (createError || !created?.user) {
-      return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
-    }
-
-    await admin.from("agencies").upsert(
-      { id: DEMO_AGENCY_ID, name: DEMO_AGENCY_NAME, primary_color: "#0e3d39" },
-      { onConflict: "id" }
-    );
-    await admin.from("profiles").upsert(
-      { id: created.user.id, agency_id: DEMO_AGENCY_ID, full_name: "Beatriz Albi",
-        email: DEMO_CREDENTIALS.email, role: "admin" },
-      { onConflict: "id" }
-    );
-  }
-
-  const { error: finalError } = await supabase.auth.signInWithPassword({
-    email: DEMO_CREDENTIALS.email,
-    password: DEMO_CREDENTIALS.password,
-  });
-  if (finalError) {
-    return { error: "O modo de demonstração está indisponível de momento. Tente novamente mais tarde." };
-  }
+  // Seed a complete isolated workspace (agency, profile, properties, contacts, tasks, …).
+  // The RPC is idempotent so retries are safe.
+  await supabase.rpc("create_demo_session");
 
   redirect("/app");
 }
