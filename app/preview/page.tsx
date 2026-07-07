@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bath,
@@ -9,16 +9,23 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  Check,
   CheckSquare,
   ClipboardList,
+  Copy,
   FileText,
+  Globe,
+  Hash,
   LayoutDashboard,
+  Loader2,
   LogIn,
   Mail,
   MapPin,
   Maximize,
   Megaphone,
+  MessageSquare,
   Phone,
+  RefreshCw,
   RotateCcw,
   Rss,
   Settings,
@@ -29,6 +36,7 @@ import {
   Trophy,
   UserPlus,
   Users,
+  Video,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -253,6 +261,85 @@ const TYPE_ICON_MAP: Record<string, typeof Sparkles> = {
   campaign: Sparkles,
 };
 
+// ─── AI Pack Generator logic ──────────────────────────────────────────────────
+interface GenForm { tipo: string; local: string; preco: string; pontos: string; tom: string }
+interface GeneratedPack { titulo: string; instagram: string; portal: string; whatsapp: string; hashtags: string; reel: string }
+
+function buildPack(f: GenForm): GeneratedPack {
+  const TL: Record<string, string> = { t0:"T0", t1:"T1", t2:"T2", t3:"T3", t4:"T4", villa:"Moradia", studio:"Loft/Studio" };
+  const tl = TL[f.tipo] ?? "Imóvel";
+  const loc = f.local.trim() || "Lisboa";
+  const locS = loc.split(",")[0].trim();
+  const pts = f.pontos.split(",").map(p => p.trim()).filter(Boolean);
+  const p1 = pts[0] ?? "ótima localização";
+  const p2 = pts[1] ?? "acabamentos de qualidade";
+  const ptStr = pts.length ? pts.join(", ") : "excelente localização";
+  const prN = parseInt(f.preco.replace(/\D/g, "") || "0");
+  const prFmt = prN > 0 ? prN.toLocaleString("pt-PT") + " €" : "";
+  const prLine = prFmt ? `Preço: ${prFmt}.` : "";
+  const baseHash = `#${locS.replace(/\s+/g,"")} #ImóveisPortugal #Imobiliária #${tl.replace(/\//g,"")} #ImoBoostAI #ComprarCasa #PortugalRealEstate`;
+
+  switch (f.tom) {
+    case "luxury": return {
+      titulo: `Exclusividade Absoluta — ${tl} de Prestígio em ${loc}`,
+      instagram: `✨ A algumas propriedades chamamos raras. Esta é uma delas.\n\n${tl} de referência em ${loc} — ${ptStr}. ${prFmt ? `Por ${prFmt}.` : ""}\n\nSó para quem reconhece o valor do extraordinário. Visita privada mediante marcação exclusiva. 📩\n\n${baseHash} #LuxoImobiliário #LuxuryRealEstate`,
+      portal: `Apresentamos um ${tl} de prestígio em ${loc}, que se distingue pela ${p1} e pelos acabamentos de nível superior. Concebido para quem não abdica da excelência em cada detalhe — desde a localização privilegiada à qualidade dos materiais. ${p2 !== "acabamentos de qualidade" ? `Realce especial para ${p2}.` : ""} Zona de referência com serviços de topo nas proximidades. ${prLine} Visitas exclusivas mediante marcação prévia.`,
+      whatsapp: `Olá! Acabei de receber um ${tl} exclusivo em ${loc} — ${ptStr}. ${prFmt ? `Valor: ${prFmt}.` : ""} Sei que este perfil encaixa no que procura. Posso marcar uma visita privada? 🏡`,
+      hashtags: baseHash + ` #LuxuryLiving #LuxuryProperty #${locS.replace(/\s+/g,"")}Luxury #PrestigiousHomes #EliteRealEstate`,
+      reel: `🎬 Script Reel — Tom Luxo\n\nCena 1 (3s): Plano aéreo de ${locS} ao amanhecer. Música orquestral suave.\nCena 2 (4s): Entrada do imóvel, zoom lento na fachada. Sem texto.\nCena 3 (5s): Interior — sala principal, luz natural a entrar. Travelling lento.\nCena 4 (3s): Destaque: ${p1}. Close-up cinematográfico.\nCena 5 (4s): Texto elegante: "${tl} de Prestígio em ${loc}"\nCena 6 (3s): Logo ImoBoost AI + contacto. Fade a preto.\n\nVoz off: "Algumas propriedades não se descrevem. Vivem-se."`,
+    };
+    case "family": return {
+      titulo: `${tl} Espaçoso para a Família — ${loc}`,
+      instagram: `🏡 O espaço que a tua família merece, na cidade que amas.\n\n${tl} em ${loc} com ${ptStr}. ${prFmt ? `A partir de ${prFmt}.` : ""} Amplo, confortável e com tudo o que precisas perto.\n\nAgende já a visita e vem conhecer o teu novo lar! 📞\n\n${baseHash} #CasaFamília #VidaFamiliar #NovaCasa`,
+      portal: `Imóvel ideal para famílias que procuram espaço, conforto e qualidade de vida em ${loc}. Este ${tl} destaca-se pela ${p1} e pela ${p2}, reunindo todas as condições para uma vida familiar plena. Zona residencial tranquila com escolas, comércio e transportes a poucos minutos. ${prLine} Marque a sua visita sem compromisso.`,
+      whatsapp: `Olá! Tenho um ${tl} em ${loc} que pode ser perfeito para a sua família — ${ptStr}. ${prFmt ? `Preço: ${prFmt}.` : ""} Quer que lhe envie mais fotos ou marcamos uma visita? 😊`,
+      hashtags: baseHash + ` #CasaFamília #VidaFamiliar #NovaCasa #CasaPortugal #FamíliasPortugal`,
+      reel: `🎬 Script Reel — Tom Familiar\n\nCena 1 (3s): Exterior com jardim ou zona verde próxima. Dia ensolarado.\nCena 2 (4s): Sala ampla — família imaginada no espaço (movimento de câmara suave).\nCena 3 (3s): Quartos espaçosos com luz natural.\nCena 4 (3s): Destaque: ${p1}.\nCena 5 (4s): Texto: "O lar que a tua família merece em ${loc}"\nCena 6 (3s): Contacto + CTA "Marca já a visita". Música alegre e acolhedora.`,
+    };
+    case "young": return {
+      titulo: `O Teu Próximo Capítulo Começa em ${loc} 🔑`,
+      instagram: `🔑 Imagina acordar aqui todos os dias.\n\n${tl} em ${loc} — ${ptStr}. ${prFmt ? `Apenas ${prFmt}.` : ""}\n\nNovo lar, nova vida. Marca já a visita antes que seja tarde! ⚡\n\n${baseHash} #PrimeiraCasa #JovensCompram #NovosLares #OportunidadeÚnica`,
+      portal: `${tl} moderno e funcional em ${loc}, ideal para jovens profissionais ou casais à procura do primeiro imóvel. Destaca-se pela ${p1} e pela ${p2}. Localização central com fácil acesso a transportes, restauração e vida cultural. ${prLine} Uma oportunidade não deve ser perdida.`,
+      whatsapp: `Ei! Vi que andas à procura de imóvel. Tenho um ${tl} em ${loc} que acho que vais adorar — ${ptStr}. ${prFmt ? `Por ${prFmt}.` : ""} Consegues ver esta semana? 🚀`,
+      hashtags: baseHash + ` #PrimeiraCasa #JovensCompram #Millennials #FirstHome #${locS.replace(/\s+/g,"")}Life`,
+      reel: `🎬 Script Reel — Tom Jovem\n\nCena 1 (2s): Vista da janela / exterior apelativo. Corte rápido.\nCena 2 (3s): Interior moderno. Música energética.\nCena 3 (2s): Detalhe: ${p1}. Corte dinâmico.\nCena 4 (2s): Detalhe: ${p2 !== "acabamentos de qualidade" ? p2 : "zona envolvente"}.\nCena 5 (3s): Texto animado: "${tl} em ${loc}"${prFmt ? ` + ${prFmt}` : ""}.\nCena 6 (2s): CTA "Marca já" + contacto. Cortes rápidos, vibe urbana.`,
+    };
+    case "direct": return {
+      titulo: `${tl} em ${loc}${prFmt ? ` — ${prFmt}` : ""} — Disponível Já`,
+      instagram: `📌 ${tl} disponível em ${loc}.\n\n✅ ${ptStr}${prFmt ? `\n💶 ${prFmt}` : ""}\n\nVisitas esta semana. Contacta já. ☎️\n\n${baseHash} #VendaRápida #Oportunidade`,
+      portal: `${tl} situado em ${loc}. Características: ${ptStr}. ${prLine} Imóvel disponível para visitas imediatas. Documentação em ordem. Excelente relação qualidade-preço. Não perca esta oportunidade — contacte-nos hoje.`,
+      whatsapp: `Bom dia! ${tl} em ${loc} — ${ptStr}. ${prFmt ? `Preço: ${prFmt}.` : ""} Disponível para visita esta semana. Interessa?`,
+      hashtags: baseHash + ` #VendaRápida #BomPreço #Oportunidade #NegócioImóvel #Disponível`,
+      reel: `🎬 Script Reel — Tom Direto\n\nCena 1 (2s): Exterior do imóvel. Sem música dramática — direto ao ponto.\nCena 2 (2s): Interior principal.\nCena 3 (2s): ${p1} em destaque.\nCena 4 (3s): Texto grande: ${prFmt ? `"${prFmt}"` : `"${tl} em ${loc}"`}.\nCena 5 (3s): "Disponível já · Marca a visita" + contacto. Objetivo e eficaz.`,
+    };
+    case "investment": return {
+      titulo: `${tl} em ${loc} — Rentabilidade e Valorização Garantidas`,
+      instagram: `📈 Investimento inteligente em ${loc}.\n\n${tl} com ${ptStr} — zona em valorização constante, procura de arrendamento sólida. ${prFmt ? `Investimento: ${prFmt}.` : ""}\n\nOs melhores investimentos não esperam. Fala connosco. 💼\n\n${baseHash} #InvestimentoImobiliário #RealEstateInvesting #Rentabilidade`,
+      portal: `Excelente oportunidade de investimento imobiliário em ${loc}. ${tl} com ${ptStr}, numa zona com forte procura de arrendamento e valorização histórica consistente. Retorno potencial estimado entre 4% e 6% ao ano. ${prLine} Ideal para carteira de investimento a médio e longo prazo. Solicite análise de rentabilidade detalhada.`,
+      whatsapp: `Olá! Tenho uma oportunidade de investimento em ${loc} — ${tl} com ${ptStr}. ${prFmt ? `Valor: ${prFmt}.` : ""} Rentabilidade estimada de 4–6%/ano. Posso enviar análise detalhada?`,
+      hashtags: baseHash + ` #InvestimentoImobiliário #Rentabilidade #RealEstateInvesting #PassiveIncome #${locS.replace(/\s+/g,"")}Invest`,
+      reel: `🎬 Script Reel — Tom Investimento\n\nCena 1 (3s): Vista aérea de ${locS} — movimento, vida, atividade económica.\nCena 2 (3s): Imóvel com destaque para ${p1}.\nCena 3 (5s): Infográfico animado: "Zona em valorização · Procura sólida · Rentabilidade 4–6%/ano".\nCena 4 (3s): Texto: "O teu próximo investimento em ${loc}" + contacto.\nMúsica: confiante e profissional.`,
+    };
+    default: return { // premium
+      titulo: `${tl} com ${p1} — ${loc}`,
+      instagram: `🏡 Descobre o equilíbrio perfeito entre conforto e localização.\n\n${tl} em ${loc} com ${ptStr}. ${prFmt ? `Preço: ${prFmt}.` : ""}\n\nUma oportunidade que não vais querer perder. Agenda já a tua visita! 📩\n\n${baseHash} #CasaPortugal #MercadoImobiliário`,
+      portal: `Apresentamos um ${tl} de qualidade superior em ${loc}, que se destaca pela ${p1} e pela ${p2}. Imóvel com acabamentos cuidados, excelente luminosidade e óptimas condições de habitabilidade. Zona com bons acessos e serviços nas proximidades. ${prLine} Marque a sua visita.`,
+      whatsapp: `Olá! Tenho um ${tl} em ${loc} que pode ser exatamente o que procura — ${ptStr}. ${prFmt ? `Valor: ${prFmt}.` : ""} Quer que marquemos uma visita? 😊`,
+      hashtags: baseHash + ` #CasaPortugal #ComprarImóvel #MercadoImobiliário #ImóveisLisboa #HomePortugal`,
+      reel: `🎬 Script Reel — Tom Premium\n\nCena 1 (3s): Zona envolvente de ${locS} — luz dourada, atmosfera premium.\nCena 2 (4s): Interior — sala e áreas comuns com iluminação natural.\nCena 3 (3s): Destaque: ${p1}.\nCena 4 (3s): ${p2 !== "acabamentos de qualidade" ? `Destaque: ${p2}.` : "Pormenores de qualidade e acabamento."}\nCena 5 (3s): Texto: "${tl} em ${loc}" + contacto. Música suave e profissional.`,
+    };
+  }
+}
+
+const GEN_PHASES = [
+  "A analisar características do imóvel…",
+  "A identificar pontos de diferenciação…",
+  "A criar título comercial…",
+  "A gerar conteúdo para redes sociais…",
+  "A adaptar ao tom de comunicação…",
+  "Pack de promoção completo gerado ✓",
+];
+
 // ─── Nav items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: "inicio" as Section, label: "Início", icon: LayoutDashboard },
@@ -340,112 +427,327 @@ function InicioSection() {
 }
 
 function StudioSection() {
-  const [filter, setFilter] = useState<string>("all");
+  type GenState = "form" | "generating" | "results";
+  const [genState, setGenState] = useState<GenState>("form");
+  const [form, setForm] = useState<GenForm>({ tipo: "t3", local: "", preco: "", pontos: "", tom: "premium" });
+  const [pack, setPack] = useState<GeneratedPack | null>(null);
+  const [phase, setPhase] = useState(0);
+  const [streamedTitulo, setStreamedTitulo] = useState("");
+  const [visibleCards, setVisibleCards] = useState(0);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const filtered = filter === "all" ? DEMO_PROPERTIES : DEMO_PROPERTIES.filter((p) => p.status === filter);
+  const handleGenerate = () => {
+    if (!form.local.trim()) return;
+    setGenState("generating");
+    setPhase(0);
 
-  const FILTERS = [
-    { id: "all", label: "Todos" },
-    { id: "active", label: "Ativos" },
-    { id: "reserved", label: "Reservados" },
-    { id: "sold", label: "Vendidos" },
+    GEN_PHASES.forEach((_, i) => {
+      setTimeout(() => setPhase(i), i * 420);
+    });
+
+    setTimeout(() => {
+      const result = buildPack(form);
+      setPack(result);
+      setStreamedTitulo("");
+      setVisibleCards(0);
+      setGenState("results");
+
+      let idx = 0;
+      const ti = setInterval(() => {
+        idx++;
+        setStreamedTitulo(result.titulo.slice(0, idx));
+        if (idx >= result.titulo.length) clearInterval(ti);
+      }, 25);
+
+      [1, 2, 3, 4, 5, 6].forEach((n) => {
+        setTimeout(() => setVisibleCards(n), n * 200);
+      });
+    }, GEN_PHASES.length * 420 + 400);
+  };
+
+  const handleCopy = (text: string, key: string) => {
+    void navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleReset = () => {
+    setGenState("form");
+    setPack(null);
+    setStreamedTitulo("");
+    setVisibleCards(0);
+  };
+
+  const TIPO_OPTIONS = [
+    { id: "t0", label: "T0/Studio" },
+    { id: "t1", label: "T1" },
+    { id: "t2", label: "T2" },
+    { id: "t3", label: "T3" },
+    { id: "t4", label: "T4+" },
+    { id: "villa", label: "Moradia" },
   ] as const;
+
+  const TOM_OPTIONS = [
+    { id: "premium", label: "Premium" },
+    { id: "luxury", label: "Luxo" },
+    { id: "family", label: "Família" },
+    { id: "young", label: "Jovem" },
+    { id: "direct", label: "Direto" },
+    { id: "investment", label: "Investimento" },
+  ] as const;
+
+  const RESULT_CARDS = pack
+    ? [
+        { key: "titulo", label: "Título comercial", icon: Sparkles, text: streamedTitulo, full: pack.titulo, isTitle: true },
+        { key: "instagram", label: "Instagram / Facebook", icon: MessageSquare, text: pack.instagram, full: pack.instagram, isTitle: false },
+        { key: "portal", label: "Descrição de portal", icon: Globe, text: pack.portal, full: pack.portal, isTitle: false },
+        { key: "whatsapp", label: "Mensagem WhatsApp", icon: Phone, text: pack.whatsapp, full: pack.whatsapp, isTitle: false },
+        { key: "hashtags", label: "Hashtags", icon: Hash, text: pack.hashtags, full: pack.hashtags, isTitle: false },
+        { key: "reel", label: "Script para Reel", icon: Video, text: pack.reel, full: pack.reel, isTitle: false },
+      ]
+    : [];
 
   return (
     <>
       <header className="flex items-center justify-between gap-4 border-b border-border bg-background/80 px-4 py-4 backdrop-blur lg:px-8">
         <div>
           <h1 className="font-display text-lg font-semibold text-foreground sm:text-xl">Estúdio de Marketing AI</h1>
-          <p className="text-sm text-muted-foreground">Imóveis e packs de promoção gerados com IA.</p>
+          <p className="text-sm text-muted-foreground">
+            {genState === "results" ? "Pack de promoção gerado com sucesso." : "Preenche os dados do imóvel e gera um pack de promoção completo."}
+          </p>
         </div>
-        <Badge variant="secondary" className="shrink-0">Modo demonstração</Badge>
+        {genState === "results" && (
+          <button
+            onClick={handleReset}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:border-primary hover:text-foreground transition-colors"
+          >
+            <RefreshCw className="size-3.5" /> Novo imóvel
+          </button>
+        )}
+        {genState === "form" && (
+          <Badge variant="secondary" className="shrink-0">Modo demonstração</Badge>
+        )}
       </header>
 
-      <main className="flex-1 space-y-6 overflow-y-auto p-4 lg:p-8">
-        <div className="flex gap-2 flex-wrap">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
-                filter === f.id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+      <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        {/* ── Form state ─────────────────────────────────────────── */}
+        {genState === "form" && (
+          <div className="mx-auto max-w-2xl space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="size-4 text-primary" />
+                  Gerar Pack de Promoção AI
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Tipologia */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Tipologia</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TIPO_OPTIONS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, tipo: t.id }))}
+                        className={cn(
+                          "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+                          form.tipo === t.id
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((property) => {
-            const area = property.useful_area ?? property.gross_area;
-            return (
-              <div
-                key={property.id}
-                className="group block overflow-hidden rounded-xl border border-border bg-card shadow-sm"
-              >
-                <div className="relative aspect-4/3 w-full bg-secondary">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={property.cover_image_url ?? ""}
-                    alt={property.title}
-                    className="h-full w-full object-cover"
+                {/* Localização */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Localização <span className="text-destructive">*</span>
+                  </p>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="ex: Alfama, Lisboa"
+                      value={form.local}
+                      onChange={(e) => setForm((f) => ({ ...f, local: e.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Preço */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Preço <span className="text-xs text-muted-foreground">(opcional)</span></p>
+                  <input
+                    type="text"
+                    placeholder="ex: 450000"
+                    value={form.preco}
+                    onChange={(e) => setForm((f) => ({ ...f, preco: e.target.value }))}
+                    className="w-full rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   />
-                  <div className="absolute top-2 left-2">
-                    <StatusBadge status={property.status} />
-                  </div>
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="outline" className="bg-background/90">
-                      {property.deal_type === "sale" ? "Venda" : "Arrendamento"}
-                    </Badge>
+                </div>
+
+                {/* Pontos fortes */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Pontos fortes <span className="text-xs text-muted-foreground">(separados por vírgulas)</span>
+                  </p>
+                  <textarea
+                    placeholder="ex: vista rio, remodelado, piscina, garagem, luminoso"
+                    value={form.pontos}
+                    onChange={(e) => setForm((f) => ({ ...f, pontos: e.target.value }))}
+                    rows={2}
+                    className="w-full resize-none rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Tom */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Tom de comunicação</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TOM_OPTIONS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, tom: t.id }))}
+                        className={cn(
+                          "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+                          form.tom === t.id
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="space-y-2 p-4">
-                  <p className="line-clamp-1 font-display font-semibold text-foreground">
-                    {property.commercial_title ?? property.title}
-                  </p>
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="size-3.5 shrink-0" />
-                    {property.location}
-                  </p>
-                  <p className="font-display text-lg font-semibold text-primary">
-                    {formatCurrency(property.price)}{property.deal_type === "rent" ? "/mês" : ""}
-                  </p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{TYPOLOGY_LABEL[property.property_type]}</span>
-                    {property.bedrooms > 0 && (
-                      <span className="flex items-center gap-1"><BedDouble className="size-3.5" /> {property.bedrooms}</span>
-                    )}
-                    {property.bathrooms > 0 && (
-                      <span className="flex items-center gap-1"><Bath className="size-3.5" /> {property.bathrooms}</span>
-                    )}
-                    {area && (
-                      <span className="flex items-center gap-1"><Maximize className="size-3.5" /> {area} m²</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={!form.local.trim()}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Sparkles className="size-4" />
+                  Gerar Pack de Promoção
+                </button>
+              </CardContent>
+            </Card>
 
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-center gap-4 py-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Sparkles className="size-5" />
+            <p className="text-center text-xs text-muted-foreground">
+              Este gerador simula a IA do ImoBoost em modo demonstração — na versão real, a IA analisa também as fotos e documentos do imóvel.
+            </p>
+          </div>
+        )}
+
+        {/* ── Generating state ────────────────────────────────────── */}
+        {genState === "generating" && (
+          <div className="mx-auto flex max-w-md flex-col items-center justify-center space-y-8 py-16">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Loader2 className="size-8 animate-spin" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Pack de Promoção AI</p>
-              <p className="text-xs text-muted-foreground">
-                Em modo demonstração — na versão real, um clique gera título comercial, legenda de Instagram, descrição de portal, anúncio Meta e muito mais.
-              </p>
+            <div className="w-full space-y-2">
+              {GEN_PHASES.map((label, i) => {
+                const done = i < phase || (i === phase && i === GEN_PHASES.length - 1);
+                const current = i === phase && i < GEN_PHASES.length - 1;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all duration-300",
+                      done ? "text-emerald-600" : current ? "font-medium text-foreground" : "text-muted-foreground/40"
+                    )}
+                  >
+                    <div className="size-5 shrink-0 flex items-center justify-center">
+                      {done ? (
+                        <Check className="size-5 text-emerald-500" />
+                      ) : current ? (
+                        <Loader2 className="size-4 animate-spin text-primary" />
+                      ) : (
+                        <div className="size-3.5 rounded-full border-2 border-current" />
+                      )}
+                    </div>
+                    {label}
+                  </div>
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* ── Results state ────────────────────────────────────────── */}
+        {genState === "results" && pack && (
+          <div className="mx-auto max-w-3xl space-y-4">
+            {RESULT_CARDS.map((card, idx) => {
+              const Icon = card.icon;
+              const isVisible = idx < visibleCards;
+              return (
+                <div
+                  key={card.key}
+                  style={{ transitionDelay: `${idx * 60}ms` }}
+                  className={cn(
+                    "rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-300",
+                    isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                  )}
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Icon className="size-4 text-primary" />
+                      {card.label}
+                    </div>
+                    <button
+                      onClick={() => handleCopy(card.full, card.key)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    >
+                      {copied === card.key ? (
+                        <><Check className="size-3 text-emerald-500" /> Copiado</>
+                      ) : (
+                        <><Copy className="size-3" /> Copiar</>
+                      )}
+                    </button>
+                  </div>
+                  <p className={cn(
+                    "whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed",
+                    card.isTitle && "text-base font-semibold text-foreground"
+                  )}>
+                    {card.text}
+                    {card.isTitle && card.text.length < card.full.length && (
+                      <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5 align-middle" />
+                    )}
+                  </p>
+                </div>
+              );
+            })}
+
+            {visibleCards >= 6 && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="flex items-center gap-4 py-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Sparkles className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">Gostou do resultado?</p>
+                    <p className="text-xs text-muted-foreground">
+                      Na versão real, a IA analisa fotos, gera variantes e publica diretamente nos portais e redes sociais.
+                    </p>
+                  </div>
+                  <Link
+                    href="/login"
+                    className="ml-auto shrink-0 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Criar conta
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </main>
     </>
   );
