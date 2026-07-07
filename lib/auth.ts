@@ -80,7 +80,8 @@ export async function requireUser(): Promise<CurrentUser> {
         }
       }
 
-      // Provisioning failed — send to login rather than the onboarding form
+      // Provisioning failed — sign out to avoid a redirect loop and let the user retry
+      await supabase.auth.signOut();
       redirect("/login");
     }
 
