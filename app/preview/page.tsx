@@ -16,6 +16,7 @@ import {
   FileText,
   Globe,
   Hash,
+  ImagePlus,
   LayoutDashboard,
   Loader2,
   LogIn,
@@ -34,9 +35,11 @@ import {
   Square,
   TrendingUp,
   Trophy,
+  Upload,
   UserPlus,
   Users,
   Video,
+  X,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -432,22 +435,51 @@ function StudioSection() {
   const [form, setForm] = useState<GenForm>({ tipo: "t3", local: "", preco: "", pontos: "", tom: "premium" });
   const [pack, setPack] = useState<GeneratedPack | null>(null);
   const [phase, setPhase] = useState(0);
+  const [activePhases, setActivePhases] = useState<string[]>(GEN_PHASES);
   const [streamedTitulo, setStreamedTitulo] = useState("");
   const [visibleCards, setVisibleCards] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const urls = photos.map((f) => URL.createObjectURL(f));
+    setPhotoUrls(urls);
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [photos]);
+
+  const addPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const imgs = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    setPhotos((prev) => [...prev, ...imgs].slice(0, 12));
+  };
 
   const handleGenerate = () => {
     if (!form.local.trim()) return;
+    const hasPhotos = photos.length > 0;
+    const phases = hasPhotos
+      ? [`A analisar ${photos.length} fotografia${photos.length > 1 ? "s" : ""} enviada${photos.length > 1 ? "s" : ""}…`, ...GEN_PHASES]
+      : GEN_PHASES;
+    setActivePhases(phases);
     setGenState("generating");
     setPhase(0);
 
-    GEN_PHASES.forEach((_, i) => {
+    phases.forEach((_, i) => {
       setTimeout(() => setPhase(i), i * 420);
     });
 
     setTimeout(() => {
       const result = buildPack(form);
-      setPack(result);
+      // Enrich result with photo mention when images were provided
+      const enriched: GeneratedPack = hasPhotos
+        ? {
+            ...result,
+            instagram: `📸 ${photos.length} fotografia${photos.length > 1 ? "s" : ""} cuidadosamente selecionada${photos.length > 1 ? "s" : ""} para mostrar o melhor deste imóvel.\n\n` + result.instagram,
+            portal: result.portal + `\n\nImóvel documentado com ${photos.length} fotografia${photos.length > 1 ? "s" : ""} profissionais disponíveis para consulta.`,
+          }
+        : result;
+      setPack(enriched);
       setStreamedTitulo("");
       setVisibleCards(0);
       setGenState("results");
@@ -455,14 +487,14 @@ function StudioSection() {
       let idx = 0;
       const ti = setInterval(() => {
         idx++;
-        setStreamedTitulo(result.titulo.slice(0, idx));
-        if (idx >= result.titulo.length) clearInterval(ti);
+        setStreamedTitulo(enriched.titulo.slice(0, idx));
+        if (idx >= enriched.titulo.length) clearInterval(ti);
       }, 25);
 
       [1, 2, 3, 4, 5, 6].forEach((n) => {
         setTimeout(() => setVisibleCards(n), n * 200);
       });
-    }, GEN_PHASES.length * 420 + 400);
+    }, phases.length * 420 + 400);
   };
 
   const handleCopy = (text: string, key: string) => {
@@ -476,6 +508,7 @@ function StudioSection() {
     setPack(null);
     setStreamedTitulo("");
     setVisibleCards(0);
+    setPhotos([]);
   };
 
   const TIPO_OPTIONS = [
@@ -628,6 +661,74 @@ function StudioSection() {
                   </div>
                 </div>
 
+                {/* Photos */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Fotografias{" "}
+                    <span className="text-xs text-muted-foreground">(opcional — melhora o resultado)</span>
+                  </p>
+
+                  {/* Drop zone */}
+                  <label
+                    htmlFor="preview-photo-upload"
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); addPhotos(e.dataTransfer.files); }}
+                    className={cn(
+                      "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-sm transition-colors",
+                      isDragging
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border bg-secondary/30 text-muted-foreground hover:border-primary hover:bg-primary/5 hover:text-primary"
+                    )}
+                  >
+                    <Upload className="size-6" />
+                    <span className="font-medium">Clique ou arraste as fotos aqui</span>
+                    <span className="text-xs opacity-70">JPEG · PNG · HEIC · até 12 fotos</span>
+                    <input
+                      id="preview-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      onChange={(e) => addPhotos(e.target.files)}
+                    />
+                  </label>
+
+                  {/* Thumbnails */}
+                  {photos.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {photoUrls.map((url, i) => (
+                        <div key={i} className="group relative size-20 overflow-hidden rounded-lg border border-border bg-secondary">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setPhotos((p) => p.filter((_, idx) => idx !== i))}
+                            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            <X className="size-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                      <label
+                        htmlFor="preview-photo-upload-more"
+                        className="flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                      >
+                        <ImagePlus className="size-4" />
+                        <span className="text-[10px]">Mais</span>
+                        <input
+                          id="preview-photo-upload-more"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="sr-only"
+                          onChange={(e) => addPhotos(e.target.files)}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleGenerate}
@@ -635,7 +736,7 @@ function StudioSection() {
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Sparkles className="size-4" />
-                  Gerar Pack de Promoção
+                  {photos.length > 0 ? `Gerar Pack com ${photos.length} Foto${photos.length > 1 ? "s" : ""}` : "Gerar Pack de Promoção"}
                 </button>
               </CardContent>
             </Card>
@@ -653,9 +754,9 @@ function StudioSection() {
               <Loader2 className="size-8 animate-spin" />
             </div>
             <div className="w-full space-y-2">
-              {GEN_PHASES.map((label, i) => {
-                const done = i < phase || (i === phase && i === GEN_PHASES.length - 1);
-                const current = i === phase && i < GEN_PHASES.length - 1;
+              {activePhases.map((label, i) => {
+                const done = i < phase || (i === phase && i === activePhases.length - 1);
+                const current = i === phase && i < activePhases.length - 1;
                 return (
                   <div
                     key={i}
