@@ -50,7 +50,42 @@ export async function requireUser(): Promise<CurrentUser> {
   if (!auth.user) redirect("/login");
 
   const user = await getCurrentUser();
-  if (!user) redirect("/onboarding");
+  if (!user) {
+    if (auth.user.is_anonymous) {
+      // Auto-provision the demo workspace — idempotent, safe to retry
+      await supabase.rpc("create_demo_session");
+
+      // getCurrentUser() is React-cached for this request, so query the DB directly
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        const { data: agency } = await supabase
+          .from("agencies")
+          .select("*")
+          .eq("id", profile.agency_id)
+          .maybeSingle();
+
+        if (agency) {
+          return {
+            authId: auth.user.id,
+            email: auth.user.email ?? profile.email,
+            profile: profile as Profile,
+            agency: agency as Agency,
+            isDemo: true,
+          };
+        }
+      }
+
+      // Provisioning failed — send to login rather than the onboarding form
+      redirect("/login");
+    }
+
+    redirect("/onboarding");
+  }
   return user;
 }
 

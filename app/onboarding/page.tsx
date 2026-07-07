@@ -10,6 +10,12 @@ export default async function OnboardingPage() {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login");
 
+  // Anonymous (demo) users should never see this form — provision and send straight to the app
+  if (auth.user.is_anonymous) {
+    await supabase.rpc("create_demo_session");
+    redirect("/app");
+  }
+
   const user = await getCurrentUser();
   if (user) redirect("/app");
 

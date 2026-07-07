@@ -51,7 +51,11 @@ export async function demoSignInAction(_prevState: AuthActionState): Promise<Aut
 
   // Seed a complete isolated workspace (agency, profile, properties, contacts, tasks, …).
   // The RPC is idempotent so retries are safe.
-  await supabase.rpc("create_demo_session");
+  const { error: rpcError } = await supabase.rpc("create_demo_session");
+  if (rpcError) {
+    // Non-fatal: requireUser() will retry provisioning on the first page load
+    console.error("[demo] create_demo_session:", rpcError.message);
+  }
 
   redirect("/app");
 }
